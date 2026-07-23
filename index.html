@@ -292,8 +292,9 @@ uploadForm.addEventListener('submit', async (e) => {
     const buffer = await file.arrayBuffer();
     const hash = await sha256Hex(buffer);
 
-    const ext = file.name.includes('.') ? file.name.split('.').pop() : 'mp4';
-    const path = `${postDate}/${groupName}/${hash.slice(0, 12)}.${ext}`;
+    const rawExt = file.name.includes('.') ? file.name.split('.').pop() : 'mp4';
+    const ext = /^[a-zA-Z0-9]+$/.test(rawExt) ? rawExt.toLowerCase() : 'mp4';
+    const path = `${postDate}/${hash}.${ext}`;
 
     progressText.textContent = 'アップロード中...';
     const { error: uploadError } = await supabase.storage
