@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Setlog 動画アーカイブ</title>
 <style>
   :root {
@@ -12,89 +12,116 @@
     --text: #1c1c1e;
     --muted: #8e8e93;
   }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
     background: var(--bg);
     color: var(--text);
-    padding-bottom: 60px;
   }
   header {
     position: sticky;
     top: 0;
     background: var(--accent);
     color: white;
-    padding: 16px 20px;
+    padding: 14px 16px;
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 10px;
     z-index: 10;
   }
-  header h1 { font-size: 18px; margin: 0; }
-  header button {
-    background: white;
-    color: var(--accent);
-    border: none;
-    padding: 8px 14px;
-    border-radius: 20px;
-    font-weight: bold;
-    font-size: 14px;
+  header .back-btn {
+    background: none; border: none; color: white; font-size: 20px; padding: 0 4px; line-height: 1;
   }
-  main { max-width: 720px; margin: 0 auto; padding: 16px; }
-  .date-heading {
-    font-size: 15px;
-    font-weight: bold;
-    color: var(--muted);
-    margin: 24px 4px 10px;
+  header h1 { font-size: 17px; margin: 0; flex: 1; }
+  header .action-btn {
+    background: white; color: var(--accent); border: none;
+    padding: 7px 12px; border-radius: 20px; font-weight: bold; font-size: 13px;
   }
-  .card {
-    background: var(--card);
-    border-radius: 14px;
-    overflow: hidden;
-    margin-bottom: 16px;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  #app { max-width: 720px; margin: 0 auto; padding: 16px; padding-bottom: 90px; }
+
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: white; border-top: 1px solid #e5e5e5;
+    display: flex; z-index: 30;
+    padding-bottom: env(safe-area-inset-bottom);
   }
-  .card video { width: 100%; display: block; background: #000; max-height: 480px; }
-  .card-body { padding: 12px 14px; }
-  .badge {
-    display: inline-block;
-    background: #ffe4ea;
-    color: var(--accent);
-    font-size: 12px;
-    font-weight: bold;
-    padding: 3px 10px;
-    border-radius: 12px;
-    margin-bottom: 6px;
+  .nav-btn {
+    flex: 1; background: none; border: none; padding: 10px 0 8px;
+    font-size: 11px; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 2px;
   }
-  .card-meta { font-size: 13px; color: var(--muted); margin-top: 4px; }
-  .card-memo { font-size: 14px; margin-top: 8px; white-space: pre-wrap; }
-  .card-footer { display: flex; justify-content: flex-end; margin-top: 8px; }
-  .delete-btn {
-    background: none; border: none; color: var(--muted);
-    font-size: 12px; cursor: pointer; padding: 4px 8px;
-  }
+  .nav-btn .icon { font-size: 20px; }
+  .nav-btn.active { color: var(--accent); }
+
   .empty { text-align: center; color: var(--muted); margin-top: 60px; font-size: 14px; }
 
-  .modal-overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.4);
-    z-index: 20;
-    align-items: flex-end;
+  /* Home: group list */
+  .group-card {
+    background: var(--card); border-radius: 14px; padding: 16px;
+    margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
   }
-  .modal-overlay.open { display: flex; }
-  .modal {
-    background: white;
-    width: 100%;
-    max-width: 720px;
-    margin: 0 auto;
-    border-radius: 16px 16px 0 0;
-    padding: 20px;
-    max-height: 88vh;
-    overflow-y: auto;
+  .group-card .name { font-size: 16px; font-weight: bold; }
+  .group-card .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .group-card .arrow { color: var(--muted); font-size: 18px; }
+  .fab {
+    display: block; width: 100%; background: var(--accent); color: white;
+    border: none; padding: 14px; border-radius: 12px; font-size: 15px; font-weight: bold;
+    margin-top: 8px;
   }
-  .modal h2 { margin: 0 0 16px; font-size: 17px; }
+
+  /* Group album: day list */
+  .date-heading { font-size: 13px; font-weight: bold; color: var(--muted); margin: 4px 0 10px; }
+  .day-card {
+    background: var(--card); border-radius: 14px; overflow: hidden; margin-bottom: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08); display: flex; cursor: pointer;
+  }
+  .day-card .thumb {
+    width: 100px; min-width: 100px; height: 100px; background: #000 url('') center/cover;
+    display: flex; align-items: center; justify-content: center; color: #666; font-size: 24px;
+  }
+  .day-card .thumb video { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+  .day-card .info { padding: 12px 14px; flex: 1; }
+  .day-card .info .date { font-weight: bold; font-size: 15px; }
+  .day-card .info .meta { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* Day editor */
+  .section-label { font-size: 13px; font-weight: bold; color: var(--muted); margin: 18px 0 8px; }
+  .video-box {
+    background: var(--card); border-radius: 14px; overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .video-box video { width: 100%; display: block; background: #000; max-height: 420px; }
+  .video-placeholder, .replace-row {
+    padding: 30px 14px; text-align: center; color: var(--muted); font-size: 14px;
+  }
+  .replace-row { padding: 10px 14px; text-align: right; }
+  .link-btn { background: none; border: none; color: var(--accent); font-weight: bold; font-size: 13px; }
+  .upload-video-btn {
+    width: 100%; background: var(--accent); color: white; border: none;
+    padding: 14px; border-radius: 12px; font-size: 15px; font-weight: bold;
+  }
+
+  .photo-grid {
+    display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px;
+  }
+  .photo-slot {
+    position: relative; aspect-ratio: 1/1; border-radius: 8px; overflow: hidden;
+    background: var(--card); box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .photo-slot img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-slot .hour-label {
+    position: absolute; top: 2px; left: 3px; font-size: 9px; color: white;
+    background: rgba(0,0,0,0.5); padding: 1px 4px; border-radius: 4px;
+  }
+  .photo-slot .hour-label.empty-label { color: var(--muted); background: none; position: static; font-size: 10px; }
+  .photo-slot .remove-photo {
+    position: absolute; top: 2px; right: 2px; width: 16px; height: 16px; border-radius: 50%;
+    background: rgba(0,0,0,0.6); color: white; border: none; font-size: 11px; line-height: 16px; padding: 0;
+  }
+  .photo-slot.empty { color: var(--muted); }
+
   .field { margin-bottom: 14px; }
   .field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
   .field input, .field textarea {
@@ -102,61 +129,87 @@
     font-size: 14px; font-family: inherit;
   }
   .field textarea { resize: vertical; min-height: 60px; }
+  .save-btn {
+    background: var(--accent); color: white; border: none; padding: 10px 18px;
+    border-radius: 10px; font-size: 14px; font-weight: bold;
+  }
+  .danger-btn {
+    background: none; border: none; color: #d33; font-size: 13px; margin-top: 20px;
+  }
+  .progress-text { font-size: 13px; color: var(--muted); margin-top: 8px; }
+
+  /* Calendar */
+  .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .cal-nav button { background: none; border: none; font-size: 20px; color: var(--accent); padding: 4px 12px; }
+  .cal-nav .label { font-size: 16px; font-weight: bold; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-dow { text-align: center; font-size: 11px; color: var(--muted); padding-bottom: 6px; }
+  .cal-cell {
+    aspect-ratio: 1/1; background: var(--card); border-radius: 8px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 13px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); cursor: pointer; position: relative;
+  }
+  .cal-cell.blank { background: none; box-shadow: none; cursor: default; }
+  .cal-cell.today { border: 2px solid var(--accent); }
+  .cal-cell .dots { display: flex; gap: 2px; margin-top: 3px; }
+  .cal-cell .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+
+  .cal-day-card {
+    background: var(--card); border-radius: 14px; overflow: hidden; margin-bottom: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08); cursor: pointer;
+  }
+  .cal-day-card video { width: 100%; display: block; background: #000; max-height: 320px; pointer-events: none; }
+  .cal-day-card .info { padding: 12px 14px; }
+  .badge {
+    display: inline-block; background: #ffe4ea; color: var(--accent);
+    font-size: 12px; font-weight: bold; padding: 3px 10px; border-radius: 12px; margin-bottom: 6px;
+  }
+
+  /* Modal (create group) */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 40; align-items: flex-end;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: white; width: 100%; max-width: 720px; margin: 0 auto;
+    border-radius: 16px 16px 0 0; padding: 20px; max-height: 88vh; overflow-y: auto;
+  }
+  .modal h2 { margin: 0 0 16px; font-size: 17px; }
   .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
   .modal-actions button {
-    flex: 1; padding: 12px; border: none; border-radius: 10px;
-    font-size: 15px; font-weight: bold;
+    flex: 1; padding: 12px; border: none; border-radius: 10px; font-size: 15px; font-weight: bold;
   }
   .btn-cancel { background: #eee; color: var(--text); }
   .btn-submit { background: var(--accent); color: white; }
   .btn-submit:disabled { opacity: 0.5; }
-  .progress-text { font-size: 13px; color: var(--muted); margin-top: 8px; text-align: center; }
 </style>
 </head>
 <body>
 
-<header>
-  <h1>Setlog 動画アーカイブ</h1>
-  <button id="openUpload">+ 投稿</button>
-</header>
+<div id="app"></div>
 
-<main id="gallery">
-  <div class="empty">読み込み中...</div>
-</main>
+<nav class="bottom-nav">
+  <button class="nav-btn" id="navHome"><span class="icon">🏠</span>ホーム</button>
+  <button class="nav-btn" id="navCalendar"><span class="icon">📅</span>カレンダー</button>
+</nav>
 
-<div class="modal-overlay" id="modalOverlay">
+<div class="modal-overlay" id="groupModalOverlay">
   <div class="modal">
-    <h2>動画を投稿</h2>
-    <form id="uploadForm">
-      <div class="field">
-        <label>日付</label>
-        <input type="date" id="postDate" required>
-      </div>
+    <h2>グループを作成</h2>
+    <form id="groupForm">
       <div class="field">
         <label>グループ名</label>
-        <input type="text" id="groupName" list="groupList" required placeholder="例: 〇〇グループ">
-        <datalist id="groupList"></datalist>
-      </div>
-      <div class="field">
-        <label>投稿者名（任意）</label>
-        <input type="text" id="uploaderName" placeholder="例: そら">
-      </div>
-      <div class="field">
-        <label>メモ（任意）</label>
-        <textarea id="memo" placeholder="この日のひとこと"></textarea>
-      </div>
-      <div class="field">
-        <label>動画ファイル</label>
-        <input type="file" id="videoFile" accept="video/*" required>
+        <input type="text" id="newGroupName" required placeholder="例: 〇〇グループ">
       </div>
       <div class="modal-actions">
-        <button type="button" class="btn-cancel" id="cancelUpload">キャンセル</button>
-        <button type="submit" class="btn-submit" id="submitUpload">投稿する</button>
+        <button type="button" class="btn-cancel" id="groupCancel">キャンセル</button>
+        <button type="submit" class="btn-submit" id="groupSubmit">作成する</button>
       </div>
-      <div class="progress-text" id="progressText"></div>
     </form>
   </div>
 </div>
+
+<input type="file" id="hiddenFileInput" accept="video/*,image/*" style="display:none">
 
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -164,175 +217,473 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const SUPABASE_URL = 'https://xquzxvpmvpusnxlzgvvc.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxdXp4dnBtdnB1c254bHpndnZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4MDE1MTksImV4cCI6MjEwMDM3NzUxOX0.zio53NfX7qTw8qhxWXCLW4gi2S4qALOrpsi5kIa8qqg';
 const BUCKET = 'setlog-media';
-
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-const gallery = document.getElementById('gallery');
-const modalOverlay = document.getElementById('modalOverlay');
-const openUploadBtn = document.getElementById('openUpload');
-const cancelUploadBtn = document.getElementById('cancelUpload');
-const uploadForm = document.getElementById('uploadForm');
-const submitBtn = document.getElementById('submitUpload');
-const progressText = document.getElementById('progressText');
-const postDateInput = document.getElementById('postDate');
-const groupList = document.getElementById('groupList');
+const app = document.getElementById('app');
+const hiddenFileInput = document.getElementById('hiddenFileInput');
+const groupModalOverlay = document.getElementById('groupModalOverlay');
+const groupForm = document.getElementById('groupForm');
+const groupSubmit = document.getElementById('groupSubmit');
 
-postDateInput.valueAsDate = new Date();
-
-openUploadBtn.addEventListener('click', () => modalOverlay.classList.add('open'));
-cancelUploadBtn.addEventListener('click', () => modalOverlay.classList.remove('open'));
-modalOverlay.addEventListener('click', (e) => {
-  if (e.target === modalOverlay) modalOverlay.classList.remove('open');
-});
-
-function formatDate(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
-}
-
+// ---------- utils ----------
 function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str ?? '';
   return div.innerHTML;
 }
-
+function todayStr() {
+  const d = new Date();
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+function formatDateLong(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+}
+function formatDateShort(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric', weekday: 'short' });
+}
 async function sha256Hex(arrayBuffer) {
   const digest = await crypto.subtle.digest('SHA-256', arrayBuffer);
   return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
+function safeExt(filename, fallback) {
+  const raw = filename.includes('.') ? filename.split('.').pop() : fallback;
+  return /^[a-zA-Z0-9]+$/.test(raw) ? raw.toLowerCase() : fallback;
+}
+async function uploadToBucket(path, file) {
+  const { error } = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type, upsert: true });
+  if (error) throw error;
+  return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+}
+function storagePathFromUrl(url) {
+  const marker = `/${BUCKET}/`;
+  const idx = url.indexOf(marker);
+  return idx === -1 ? null : decodeURIComponent(url.slice(idx + marker.length));
+}
+async function getOrCreatePost(groupId, date) {
+  const { data: existing, error: selErr } = await supabase
+    .from('posts').select('id').eq('group_id', groupId).eq('post_date', date).maybeSingle();
+  if (selErr) throw selErr;
+  if (existing) return existing.id;
+  const { data: created, error: insErr } = await supabase
+    .from('posts').insert({ group_id: groupId, post_date: date }).select('id').single();
+  if (insErr) throw insErr;
+  return created.id;
+}
 
-async function loadGallery() {
-  const { data, error } = await supabase
-    .from('posts')
-    .select('*')
-    .order('post_date', { ascending: false })
-    .order('created_at', { ascending: false });
+// ---------- router ----------
+function parseRoute(hash) {
+  const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  if (parts.length === 0) return { view: 'home' };
+  if (parts[0] === 'group' && parts.length === 2) return { view: 'group', groupId: parts[1] };
+  if (parts[0] === 'group' && parts.length === 4 && parts[2] === 'day') return { view: 'day', groupId: parts[1], date: parts[3] };
+  if (parts[0] === 'calendar' && parts[1] === 'day') return { view: 'calendarDay', date: parts[2] };
+  if (parts[0] === 'calendar') return { view: 'calendar', month: parts[1] };
+  return { view: 'home' };
+}
 
-  if (error) {
-    gallery.innerHTML = `<div class="empty">読み込みエラー: ${escapeHtml(error.message)}</div>`;
-    return;
-  }
+async function render() {
+  const route = parseRoute(location.hash);
+  document.getElementById('navHome').classList.toggle('active', route.view !== 'calendar' && route.view !== 'calendarDay');
+  document.getElementById('navCalendar').classList.toggle('active', route.view === 'calendar' || route.view === 'calendarDay');
 
-  if (!data || data.length === 0) {
-    gallery.innerHTML = '<div class="empty">まだ投稿がありません。右上の「+ 投稿」から追加してね。</div>';
-    return;
-  }
+  if (route.view === 'home') return renderHome();
+  if (route.view === 'group') return renderGroup(route.groupId);
+  if (route.view === 'day') return renderDay(route.groupId, route.date);
+  if (route.view === 'calendar') return renderCalendar(route.month);
+  if (route.view === 'calendarDay') return renderCalendarDay(route.date);
+}
 
-  const groupNames = [...new Set(data.map(p => p.group_name))];
-  groupList.innerHTML = groupNames.map(g => `<option value="${escapeHtml(g)}">`).join('');
+document.getElementById('navHome').addEventListener('click', () => { location.hash = '#/'; });
+document.getElementById('navCalendar').addEventListener('click', () => { location.hash = '#/calendar'; });
+window.addEventListener('hashchange', render);
 
-  const byDate = new Map();
-  for (const post of data) {
-    if (!byDate.has(post.post_date)) byDate.set(post.post_date, []);
-    byDate.get(post.post_date).push(post);
-  }
+// ---------- HOME ----------
+async function renderHome() {
+  app.innerHTML = `
+    <header><h1>グループ</h1></header>
+    <div style="padding-top:4px">
+      <div id="groupList" class="empty">読み込み中...</div>
+      <button class="fab" id="createGroupBtn">+ グループを作成</button>
+    </div>
+  `;
+  document.getElementById('createGroupBtn').addEventListener('click', () => {
+    document.getElementById('newGroupName').value = '';
+    groupModalOverlay.classList.add('open');
+  });
 
-  let html = '';
-  for (const [date, posts] of byDate) {
-    html += `<div class="date-heading">${formatDate(date)}</div>`;
-    for (const post of posts) {
-      html += `
-        <div class="card">
-          <video controls preload="metadata" src="${escapeHtml(post.video_url)}"></video>
-          <div class="card-body">
-            <span class="badge">${escapeHtml(post.group_name)}</span>
-            ${post.uploader_name ? `<div class="card-meta">投稿者: ${escapeHtml(post.uploader_name)}</div>` : ''}
-            ${post.memo ? `<div class="card-memo">${escapeHtml(post.memo)}</div>` : ''}
-            <div class="card-footer">
-              <button class="delete-btn" data-id="${post.id}" data-url="${escapeHtml(post.video_url)}">削除</button>
-            </div>
-          </div>
-        </div>
-      `;
-    }
-  }
-  gallery.innerHTML = html;
+  const { data, error } = await supabase.from('groups').select('id, name, created_at').order('created_at', { ascending: true });
+  const listEl = document.getElementById('groupList');
+  if (error) { listEl.innerHTML = `<div class="empty">読み込みエラー: ${escapeHtml(error.message)}</div>`; return; }
+  if (!data || data.length === 0) { listEl.innerHTML = `<div class="empty">まだグループがありません。下のボタンから作成してね。</div>`; return; }
 
-  gallery.querySelectorAll('.delete-btn').forEach(btn => {
-    btn.addEventListener('click', () => handleDelete(btn.dataset.id, btn.dataset.url));
+  listEl.innerHTML = data.map(g => `
+    <div class="group-card" data-id="${g.id}">
+      <div>
+        <div class="name">${escapeHtml(g.name)}</div>
+        <div class="sub">タップしてアルバムを見る</div>
+      </div>
+      <div class="arrow">›</div>
+    </div>
+  `).join('');
+  listEl.querySelectorAll('.group-card').forEach(el => {
+    el.addEventListener('click', () => { location.hash = `#/group/${el.dataset.id}`; });
   });
 }
 
-async function handleDelete(id, videoUrl) {
-  if (!confirm('この投稿を削除する？元には戻せません。')) return;
+groupForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('newGroupName').value.trim();
+  if (!name) return;
+  groupSubmit.disabled = true;
+  const { data, error } = await supabase.from('groups').insert({ name }).select('id').single();
+  groupSubmit.disabled = false;
+  if (error) { alert('作成に失敗しました: ' + error.message); return; }
+  groupModalOverlay.classList.remove('open');
+  location.hash = `#/group/${data.id}`;
+});
+document.getElementById('groupCancel').addEventListener('click', () => groupModalOverlay.classList.remove('open'));
+groupModalOverlay.addEventListener('click', (e) => { if (e.target === groupModalOverlay) groupModalOverlay.classList.remove('open'); });
 
-  const marker = `/${BUCKET}/`;
-  const idx = videoUrl.indexOf(marker);
-  if (idx !== -1) {
-    const path = decodeURIComponent(videoUrl.slice(idx + marker.length));
-    await supabase.storage.from(BUCKET).remove([path]);
-  }
+// ---------- GROUP ALBUM ----------
+async function renderGroup(groupId) {
+  app.innerHTML = `
+    <header>
+      <button class="back-btn" id="backBtn">‹</button>
+      <h1 id="groupTitle">読み込み中...</h1>
+    </header>
+    <div style="padding-top:4px">
+      <button class="fab" id="todayBtn" style="margin-bottom:18px">今日を記録する</button>
+      <div id="dayList" class="empty">読み込み中...</div>
+    </div>
+  `;
+  document.getElementById('backBtn').addEventListener('click', () => { location.hash = '#/'; });
+  document.getElementById('todayBtn').addEventListener('click', () => {
+    location.hash = `#/group/${groupId}/day/${todayStr()}`;
+  });
 
-  const { error } = await supabase.from('posts').delete().eq('id', id);
-  if (error) {
-    alert('削除に失敗しました: ' + error.message);
-    return;
-  }
-  loadGallery();
+  const { data: group, error: gErr } = await supabase.from('groups').select('name').eq('id', groupId).maybeSingle();
+  if (gErr || !group) { document.getElementById('groupTitle').textContent = 'グループが見つかりません'; return; }
+  document.getElementById('groupTitle').textContent = group.name;
+
+  const { data: posts, error: pErr } = await supabase
+    .from('posts').select('id, post_date, video_url')
+    .eq('group_id', groupId).order('post_date', { ascending: false });
+
+  const listEl = document.getElementById('dayList');
+  if (pErr) { listEl.innerHTML = `<div class="empty">読み込みエラー: ${escapeHtml(pErr.message)}</div>`; return; }
+  if (!posts || posts.length === 0) { listEl.innerHTML = `<div class="empty">まだ記録がありません。</div>`; return; }
+
+  const ids = posts.map(p => p.id);
+  const { data: photos } = await supabase.from('hourly_photos').select('post_id').in('post_id', ids);
+  const photoCounts = new Map();
+  (photos || []).forEach(ph => photoCounts.set(ph.post_id, (photoCounts.get(ph.post_id) || 0) + 1));
+
+  listEl.innerHTML = posts.map(p => `
+    <div class="day-card" data-date="${p.post_date}">
+      <div class="thumb">
+        ${p.video_url ? `<video muted preload="metadata" src="${escapeHtml(p.video_url)}"></video>` : '🎬'}
+      </div>
+      <div class="info">
+        <div class="date">${formatDateShort(p.post_date)}</div>
+        <div class="meta">${p.video_url ? '動画あり' : '動画なし'} ・ 写真 ${photoCounts.get(p.id) || 0}/24</div>
+      </div>
+    </div>
+  `).join('');
+  listEl.querySelectorAll('.day-card').forEach(el => {
+    el.addEventListener('click', () => { location.hash = `#/group/${groupId}/day/${el.dataset.date}`; });
+  });
 }
 
-uploadForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  submitBtn.disabled = true;
+// ---------- DAY DETAIL ----------
+async function renderDay(groupId, date) {
+  app.innerHTML = `
+    <header>
+      <button class="back-btn" id="backBtn">‹</button>
+      <h1>${formatDateLong(date)}</h1>
+    </header>
+    <div id="dayContent"><div class="empty">読み込み中...</div></div>
+  `;
+  document.getElementById('backBtn').addEventListener('click', () => { location.hash = `#/group/${groupId}`; });
 
-  try {
-    const file = document.getElementById('videoFile').files[0];
-    const postDate = postDateInput.value;
-    const groupName = document.getElementById('groupName').value.trim();
-    const uploaderName = document.getElementById('uploaderName').value.trim();
-    const memo = document.getElementById('memo').value.trim();
+  const { data: group } = await supabase.from('groups').select('name').eq('id', groupId).maybeSingle();
+  const { data: post } = await supabase
+    .from('posts').select('*').eq('group_id', groupId).eq('post_date', date).maybeSingle();
 
-    if (!file || !postDate || !groupName) {
-      alert('必須項目を入力してください。');
-      submitBtn.disabled = false;
-      return;
-    }
-
-    progressText.textContent = 'ハッシュ計算中...';
-    const buffer = await file.arrayBuffer();
-    const hash = await sha256Hex(buffer);
-
-    const rawExt = file.name.includes('.') ? file.name.split('.').pop() : 'mp4';
-    const ext = /^[a-zA-Z0-9]+$/.test(rawExt) ? rawExt.toLowerCase() : 'mp4';
-    const path = `${postDate}/${hash}.${ext}`;
-
-    progressText.textContent = 'アップロード中...';
-    const { error: uploadError } = await supabase.storage
-      .from(BUCKET)
-      .upload(path, file, { contentType: file.type, upsert: false });
-
-    if (uploadError && !uploadError.message.includes('already exists')) {
-      throw uploadError;
-    }
-
-    const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
-
-    progressText.textContent = '保存中...';
-    const { error: insertError } = await supabase.from('posts').insert({
-      post_date: postDate,
-      group_name: groupName,
-      video_url: urlData.publicUrl,
-      video_hash: hash,
-      uploader_name: uploaderName || null,
-      memo: memo || null,
-    });
-
-    if (insertError) throw insertError;
-
-    progressText.textContent = '';
-    uploadForm.reset();
-    postDateInput.valueAsDate = new Date();
-    modalOverlay.classList.remove('open');
-    loadGallery();
-  } catch (err) {
-    alert('投稿に失敗しました: ' + err.message);
-    progressText.textContent = '';
-  } finally {
-    submitBtn.disabled = false;
+  let photos = [];
+  if (post) {
+    const { data } = await supabase.from('hourly_photos').select('*').eq('post_id', post.id);
+    photos = data || [];
   }
-});
+  const photoByHour = new Map(photos.map(p => [p.hour_label, p]));
 
-loadGallery();
+  const content = document.getElementById('dayContent');
+  content.innerHTML = `
+    <div class="badge">${escapeHtml(group?.name || '')}</div>
+
+    <div class="section-label">動画</div>
+    <div class="video-box">
+      ${post?.video_url ? `
+        <video controls preload="metadata" src="${escapeHtml(post.video_url)}"></video>
+        <div class="replace-row"><button class="link-btn" id="replaceVideoBtn">動画を変更</button></div>
+      ` : `
+        <div class="video-placeholder">まだ動画がありません</div>
+      `}
+    </div>
+    ${!post?.video_url ? `<button class="upload-video-btn" id="uploadVideoBtn" style="margin-top:10px">動画をアップロード</button>` : ''}
+
+    <div class="section-label">時間ごとの写真（最大24枚）</div>
+    <div class="photo-grid" id="photoGrid"></div>
+
+    <div class="section-label">メモ</div>
+    <div class="field">
+      <label>投稿者名（任意）</label>
+      <input type="text" id="uploaderName" value="${escapeHtml(post?.uploader_name || '')}" placeholder="例: そら">
+    </div>
+    <div class="field">
+      <label>ひとこと（任意）</label>
+      <textarea id="memo" placeholder="この日のひとこと">${escapeHtml(post?.memo || '')}</textarea>
+    </div>
+    <button class="save-btn" id="saveMetaBtn">保存</button>
+    <div class="progress-text" id="progressText"></div>
+
+    ${post ? `<div><button class="danger-btn" id="deleteDayBtn">この日の記録を削除</button></div>` : ''}
+  `;
+
+  const photoGrid = document.getElementById('photoGrid');
+  photoGrid.innerHTML = Array.from({ length: 24 }, (_, h) => String(h).padStart(2, '0')).map(hour => {
+    const photo = photoByHour.get(hour);
+    if (photo) {
+      return `
+        <div class="photo-slot" data-hour="${hour}">
+          <span class="hour-label">${hour}時</span>
+          <button class="remove-photo" data-hour="${hour}">×</button>
+          <img src="${escapeHtml(photo.photo_url)}" loading="lazy">
+        </div>
+      `;
+    }
+    return `
+      <div class="photo-slot empty" data-hour="${hour}">
+        <span class="hour-label empty-label">${hour}</span>
+      </div>
+    `;
+  }).join('');
+
+  const progressText = document.getElementById('progressText');
+
+  // upload / replace video
+  const bindVideoUpload = (btn) => btn && btn.addEventListener('click', () => {
+    hiddenFileInput.accept = 'video/*';
+    hiddenFileInput.onchange = async () => {
+      const file = hiddenFileInput.files[0];
+      hiddenFileInput.value = '';
+      if (!file) return;
+      try {
+        progressText.textContent = '動画をアップロード中...';
+        const buffer = await file.arrayBuffer();
+        const hash = await sha256Hex(buffer);
+        const ext = safeExt(file.name, 'mp4');
+        const postId = await getOrCreatePost(groupId, date);
+        const path = `${groupId}/${date}/video-${hash.slice(0, 16)}.${ext}`;
+        const url = await uploadToBucket(path, file);
+        const { error } = await supabase.from('posts').update({ video_url: url, video_hash: hash }).eq('id', postId);
+        if (error) throw error;
+        progressText.textContent = '';
+        renderDay(groupId, date);
+      } catch (err) {
+        progressText.textContent = '';
+        alert('動画のアップロードに失敗しました: ' + err.message);
+      }
+    };
+    hiddenFileInput.click();
+  });
+  bindVideoUpload(document.getElementById('uploadVideoBtn'));
+  bindVideoUpload(document.getElementById('replaceVideoBtn'));
+
+  // photo slots
+  photoGrid.querySelectorAll('.photo-slot').forEach(slot => {
+    slot.addEventListener('click', (e) => {
+      if (e.target.classList.contains('remove-photo')) return;
+      const hour = slot.dataset.hour;
+      hiddenFileInput.accept = 'image/*';
+      hiddenFileInput.onchange = async () => {
+        const file = hiddenFileInput.files[0];
+        hiddenFileInput.value = '';
+        if (!file) return;
+        try {
+          progressText.textContent = `${hour}時の写真をアップロード中...`;
+          const buffer = await file.arrayBuffer();
+          const hash = await sha256Hex(buffer);
+          const ext = safeExt(file.name, 'jpg');
+          const postId = await getOrCreatePost(groupId, date);
+          const path = `${groupId}/${date}/photo-${hour}-${hash.slice(0, 16)}.${ext}`;
+          const url = await uploadToBucket(path, file);
+          const { error } = await supabase.from('hourly_photos')
+            .upsert({ post_id: postId, hour_label: hour, photo_url: url, photo_hash: hash, taken_at: new Date().toISOString() }, { onConflict: 'post_id,hour_label' });
+          if (error) throw error;
+          progressText.textContent = '';
+          renderDay(groupId, date);
+        } catch (err) {
+          progressText.textContent = '';
+          alert('写真のアップロードに失敗しました: ' + err.message);
+        }
+      };
+      hiddenFileInput.click();
+    });
+  });
+
+  photoGrid.querySelectorAll('.remove-photo').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (!confirm('この写真を削除する？')) return;
+      const hour = btn.dataset.hour;
+      const photo = photoByHour.get(hour);
+      if (!photo) return;
+      const path = storagePathFromUrl(photo.photo_url);
+      if (path) await supabase.storage.from(BUCKET).remove([path]);
+      await supabase.from('hourly_photos').delete().eq('id', photo.id);
+      renderDay(groupId, date);
+    });
+  });
+
+  // save meta
+  document.getElementById('saveMetaBtn').addEventListener('click', async () => {
+    try {
+      const uploaderName = document.getElementById('uploaderName').value.trim();
+      const memo = document.getElementById('memo').value.trim();
+      const postId = await getOrCreatePost(groupId, date);
+      const { error } = await supabase.from('posts')
+        .update({ uploader_name: uploaderName || null, memo: memo || null }).eq('id', postId);
+      if (error) throw error;
+      progressText.textContent = '保存しました';
+      setTimeout(() => { progressText.textContent = ''; }, 1500);
+    } catch (err) {
+      alert('保存に失敗しました: ' + err.message);
+    }
+  });
+
+  // delete whole day
+  const deleteBtn = document.getElementById('deleteDayBtn');
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', async () => {
+      if (!confirm('この日の記録（動画・写真すべて）を削除する？元には戻せません。')) return;
+      const urls = [];
+      if (post.video_url) urls.push(storagePathFromUrl(post.video_url));
+      photos.forEach(p => urls.push(storagePathFromUrl(p.photo_url)));
+      const paths = urls.filter(Boolean);
+      if (paths.length) await supabase.storage.from(BUCKET).remove(paths);
+      await supabase.from('hourly_photos').delete().eq('post_id', post.id);
+      await supabase.from('posts').delete().eq('id', post.id);
+      location.hash = `#/group/${groupId}`;
+    });
+  }
+}
+
+// ---------- CALENDAR ----------
+function monthRange(yearMonth) {
+  const [y, m] = yearMonth.split('-').map(Number);
+  const start = `${yearMonth}-01`;
+  const lastDay = new Date(y, m, 0).getDate();
+  const end = `${yearMonth}-${String(lastDay).padStart(2, '0')}`;
+  return { y, m, start, end, lastDay };
+}
+function shiftMonth(yearMonth, delta) {
+  let [y, m] = yearMonth.split('-').map(Number);
+  m += delta;
+  if (m < 1) { m = 12; y -= 1; }
+  if (m > 12) { m = 1; y += 1; }
+  return `${y}-${String(m).padStart(2, '0')}`;
+}
+
+async function renderCalendar(monthParam) {
+  const yearMonth = monthParam || todayStr().slice(0, 7);
+  const { y, m, start, end, lastDay } = monthRange(yearMonth);
+  const firstDow = new Date(y, m - 1, 1).getDay();
+
+  app.innerHTML = `
+    <header><h1>カレンダー</h1></header>
+    <div class="cal-nav">
+      <button id="prevMonth">‹</button>
+      <div class="label">${y}年${m}月</div>
+      <button id="nextMonth">›</button>
+    </div>
+    <div class="cal-grid" id="calGrid">
+      ${['日','月','火','水','木','金','土'].map(d => `<div class="cal-dow">${d}</div>`).join('')}
+    </div>
+  `;
+  document.getElementById('prevMonth').addEventListener('click', () => { location.hash = `#/calendar/${shiftMonth(yearMonth, -1)}`; });
+  document.getElementById('nextMonth').addEventListener('click', () => { location.hash = `#/calendar/${shiftMonth(yearMonth, 1)}`; });
+
+  const { data: posts } = await supabase.from('posts').select('post_date, group_id').gte('post_date', start).lte('post_date', end);
+  const dateGroups = new Map();
+  (posts || []).forEach(p => {
+    if (!dateGroups.has(p.post_date)) dateGroups.set(p.post_date, new Set());
+    dateGroups.get(p.post_date).add(p.group_id);
+  });
+
+  const grid = document.getElementById('calGrid');
+  let cellsHtml = '';
+  for (let i = 0; i < firstDow; i++) cellsHtml += `<div class="cal-cell blank"></div>`;
+  for (let d = 1; d <= lastDay; d++) {
+    const dateStr = `${yearMonth}-${String(d).padStart(2, '0')}`;
+    const groupCount = dateGroups.get(dateStr)?.size || 0;
+    const isToday = dateStr === todayStr();
+    cellsHtml += `
+      <div class="cal-cell${isToday ? ' today' : ''}" data-date="${dateStr}">
+        <div>${d}</div>
+        ${groupCount ? `<div class="dots">${Array.from({length: Math.min(groupCount,4)}).map(() => '<span class="dot"></span>').join('')}</div>` : ''}
+      </div>
+    `;
+  }
+  grid.insertAdjacentHTML('beforeend', cellsHtml);
+  grid.querySelectorAll('.cal-cell[data-date]').forEach(el => {
+    el.addEventListener('click', () => { location.hash = `#/calendar/day/${el.dataset.date}`; });
+  });
+}
+
+async function renderCalendarDay(date) {
+  app.innerHTML = `
+    <header>
+      <button class="back-btn" id="backBtn">‹</button>
+      <h1>${formatDateLong(date)}</h1>
+    </header>
+    <div id="dayList" class="empty">読み込み中...</div>
+  `;
+  document.getElementById('backBtn').addEventListener('click', () => { location.hash = `#/calendar/${date.slice(0,7)}`; });
+
+  const { data: posts, error } = await supabase
+    .from('posts').select('id, group_id, video_url, uploader_name, memo, groups(name)')
+    .eq('post_date', date);
+
+  const listEl = document.getElementById('dayList');
+  if (error) { listEl.innerHTML = `<div class="empty">読み込みエラー: ${escapeHtml(error.message)}</div>`; return; }
+  if (!posts || posts.length === 0) { listEl.innerHTML = `<div class="empty">この日の記録はまだありません。</div>`; return; }
+
+  const ids = posts.map(p => p.id);
+  const { data: photos } = await supabase.from('hourly_photos').select('post_id').in('post_id', ids);
+  const photoCounts = new Map();
+  (photos || []).forEach(ph => photoCounts.set(ph.post_id, (photoCounts.get(ph.post_id) || 0) + 1));
+
+  listEl.innerHTML = posts.map(p => `
+    <div class="cal-day-card" data-group="${p.group_id}">
+      ${p.video_url ? `<video muted preload="metadata" src="${escapeHtml(p.video_url)}"></video>` : ''}
+      <div class="info">
+        <div class="badge">${escapeHtml(p.groups?.name || '')}</div>
+        <div class="card-meta" style="font-size:12px;color:var(--muted)">
+          ${p.uploader_name ? `投稿者: ${escapeHtml(p.uploader_name)} ・ ` : ''}写真 ${photoCounts.get(p.id) || 0}/24
+        </div>
+        ${p.memo ? `<div style="font-size:14px;margin-top:6px;white-space:pre-wrap">${escapeHtml(p.memo)}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+  listEl.querySelectorAll('.cal-day-card').forEach(el => {
+    el.addEventListener('click', () => { location.hash = `#/group/${el.dataset.group}/day/${date}`; });
+  });
+}
+
+render();
 </script>
 
 </body>
