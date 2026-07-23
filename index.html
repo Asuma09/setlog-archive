@@ -182,6 +182,10 @@
   .btn-cancel { background: #eee; color: var(--text); }
   .btn-submit { background: var(--accent); color: white; }
   .btn-submit:disabled { opacity: 0.5; }
+
+  .photo-preview-modal { text-align: center; }
+  .photo-preview-hour { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+  .photo-preview-modal img { width: 100%; border-radius: 10px; max-height: 65vh; object-fit: contain; background: #000; }
 </style>
 </head>
 <body>
@@ -211,6 +215,17 @@
 
 <input type="file" id="hiddenFileInput" accept="video/*,image/*" style="display:none">
 
+<div class="modal-overlay" id="photoPreviewOverlay">
+  <div class="modal photo-preview-modal">
+    <div class="photo-preview-hour" id="previewHourLabel"></div>
+    <img id="previewImg" src="" alt="">
+    <div class="modal-actions">
+      <button type="button" class="btn-cancel" id="previewClose">閉じる</button>
+      <button type="button" class="btn-submit" id="previewReplace">差し替え</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -224,6 +239,26 @@ const hiddenFileInput = document.getElementById('hiddenFileInput');
 const groupModalOverlay = document.getElementById('groupModalOverlay');
 const groupForm = document.getElementById('groupForm');
 const groupSubmit = document.getElementById('groupSubmit');
+const photoPreviewOverlay = document.getElementById('photoPreviewOverlay');
+const previewImg = document.getElementById('previewImg');
+const previewHourLabel = document.getElementById('previewHourLabel');
+
+// ---------- photo preview lightbox ----------
+let currentPreviewReplace = null;
+function openPhotoPreview(hour, photo, triggerUploadFn) {
+  previewHourLabel.textContent = `${hour}時の写真`;
+  previewImg.src = photo.photo_url;
+  currentPreviewReplace = () => triggerUploadFn(hour);
+  photoPreviewOverlay.classList.add('open');
+}
+function closePhotoPreview() {
+  photoPreviewOverlay.classList.remove('open');
+  previewImg.src = '';
+  currentPreviewReplace = null;
+}
+document.getElementById('previewClose').addEventListener('click', closePhotoPreview);
+document.getElementById('previewReplace').addEventListener('click', () => { if (currentPreviewReplace) currentPreviewReplace(); });
+photoPreviewOverlay.addEventListener('click', (e) => { if (e.target === photoPreviewOverlay) closePhotoPreview(); });
 
 // ---------- utils ----------
 function escapeHtml(str) {
@@ -502,35 +537,45 @@ async function renderDay(groupId, date) {
   bindVideoUpload(document.getElementById('uploadVideoBtn'));
   bindVideoUpload(document.getElementById('replaceVideoBtn'));
 
-  // photo slots
+  // photo upload (shared by empty-slot tap and lightbox replace)
+  function triggerPhotoUpload(hour) {
+    hiddenFileInput.accept = 'image/*';
+    hiddenFileInput.onchange = async () => {
+      const file = hiddenFileInput.files[0];
+      hiddenFileInput.value = '';
+      if (!file) return;
+      try {
+        progressText.textContent = `${hour}時の写真をアップロード中...`;
+        const buffer = await file.arrayBuffer();
+        const hash = await sha256Hex(buffer);
+        const ext = safeExt(file.name, 'jpg');
+        const postId = await getOrCreatePost(groupId, date);
+        const path = `${groupId}/${date}/photo-${hour}-${hash.slice(0, 16)}.${ext}`;
+        const url = await uploadToBucket(path, file);
+        const { error } = await supabase.from('hourly_photos')
+          .upsert({ post_id: postId, hour_label: hour, photo_url: url, photo_hash: hash, taken_at: new Date().toISOString() }, { onConflict: 'post_id,hour_label' });
+        if (error) throw error;
+        progressText.textContent = '';
+        closePhotoPreview();
+        renderDay(groupId, date);
+      } catch (err) {
+        progressText.textContent = '';
+        alert('写真のアップロードに失敗しました: ' + err.message);
+      }
+    };
+    hiddenFileInput.click();
+  }
+
+  // photo slots: empty -> upload directly, filled -> open preview
   photoGrid.querySelectorAll('.photo-slot').forEach(slot => {
     slot.addEventListener('click', (e) => {
       if (e.target.classList.contains('remove-photo')) return;
       const hour = slot.dataset.hour;
-      hiddenFileInput.accept = 'image/*';
-      hiddenFileInput.onchange = async () => {
-        const file = hiddenFileInput.files[0];
-        hiddenFileInput.value = '';
-        if (!file) return;
-        try {
-          progressText.textContent = `${hour}時の写真をアップロード中...`;
-          const buffer = await file.arrayBuffer();
-          const hash = await sha256Hex(buffer);
-          const ext = safeExt(file.name, 'jpg');
-          const postId = await getOrCreatePost(groupId, date);
-          const path = `${groupId}/${date}/photo-${hour}-${hash.slice(0, 16)}.${ext}`;
-          const url = await uploadToBucket(path, file);
-          const { error } = await supabase.from('hourly_photos')
-            .upsert({ post_id: postId, hour_label: hour, photo_url: url, photo_hash: hash, taken_at: new Date().toISOString() }, { onConflict: 'post_id,hour_label' });
-          if (error) throw error;
-          progressText.textContent = '';
-          renderDay(groupId, date);
-        } catch (err) {
-          progressText.textContent = '';
-          alert('写真のアップロードに失敗しました: ' + err.message);
-        }
-      };
-      hiddenFileInput.click();
+      if (slot.classList.contains('empty')) {
+        triggerPhotoUpload(hour);
+      } else {
+        openPhotoPreview(hour, photoByHour.get(hour), triggerPhotoUpload);
+      }
     });
   });
 
