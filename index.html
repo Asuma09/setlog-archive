@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Setlog 動画アーカイブ</title>
+<style>
+  :root {
+    --bg: #f5f5f7;
+    --card: #ffffff;
+    --accent: #ff5a7a;
+    --text: #1c1c1e;
+    --muted: #8e8e93;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding-bottom: 60px;
+  }
+  header {
+    position: sticky;
+    top: 0;
+    background: var(--accent);
+    color: white;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 10;
+  }
+  header h1 { font-size: 18px; margin: 0; }
+  header button {
+    background: white;
+    color: var(--accent);
+    border: none;
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 14px;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 16px; }
+  .date-heading {
+    font-size: 15px;
+    font-weight: bold;
+    color: var(--muted);
+    margin: 24px 4px 10px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  }
+  .card video { width: 100%; display: block; background: #000; max-height: 480px; }
+  .card-body { padding: 12px 14px; }
+  .badge {
+    display: inline-block;
+    background: #ffe4ea;
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: bold;
+    padding: 3px 10px;
+    border-radius: 12px;
+    margin-bottom: 6px;
+  }
+  .card-meta { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .card-memo { font-size: 14px; margin-top: 8px; white-space: pre-wrap; }
+  .card-footer { display: flex; justify-content: flex-end; margin-top: 8px; }
+  .delete-btn {
+    background: none; border: none; color: var(--muted);
+    font-size: 12px; cursor: pointer; padding: 4px 8px;
+  }
+  .empty { text-align: center; color: var(--muted); margin-top: 60px; font-size: 14px; }
+
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 20;
+    align-items: flex-end;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: white;
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+    border-radius: 16px 16px 0 0;
+    padding: 20px;
+    max-height: 88vh;
+    overflow-y: auto;
+  }
+  .modal h2 { margin: 0 0 16px; font-size: 17px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .field input, .field textarea {
+    width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px;
+    font-size: 14px; font-family: inherit;
+  }
+  .field textarea { resize: vertical; min-height: 60px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .modal-actions button {
+    flex: 1; padding: 12px; border: none; border-radius: 10px;
+    font-size: 15px; font-weight: bold;
+  }
+  .btn-cancel { background: #eee; color: var(--text); }
+  .btn-submit { background: var(--accent); color: white; }
+  .btn-submit:disabled { opacity: 0.5; }
+  .progress-text { font-size: 13px; color: var(--muted); margin-top: 8px; text-align: center; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Setlog 動画アーカイブ</h1>
+  <button id="openUpload">+ 投稿</button>
+</header>
+
+<main id="gallery">
+  <div class="empty">読み込み中...</div>
+</main>
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2>動画を投稿</h2>
+    <form id="uploadForm">
+      <div class="field">
+        <label>日付</label>
+        <input type="date" id="postDate" required>
+      </div>
+      <div class="field">
+        <label>グループ名</label>
+        <input type="text" id="groupName" list="groupList" required placeholder="例: 〇〇グループ">
+        <datalist id="groupList"></datalist>
+      </div>
+      <div class="field">
+        <label>投稿者名（任意）</label>
+        <input type="text" id="uploaderName" placeholder="例: そら">
+      </div>
+      <div class="field">
+        <label>メモ（任意）</label>
+        <textarea id="memo" placeholder="この日のひとこと"></textarea>
+      </div>
+      <div class="field">
+        <label>動画ファイル</label>
+        <input type="file" id="videoFile" accept="video/*" required>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" id="cancelUpload">キャンセル</button>
+        <button type="submit" class="btn-submit" id="submitUpload">投稿する</button>
+      </div>
+      <div class="progress-text" id="progressText"></div>
+    </form>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL = 'https://xquzxvpmvpusnxlzgvvc.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhxdXp4dnBtdnB1c254bHpndnZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ4MDE1MTksImV4cCI6MjEwMDM3NzUxOX0.zio53NfX7qTw8qhxWXCLW4gi2S4qALOrpsi5kIa8qqg';
+const BUCKET = 'setlog-media';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const gallery = document.getElementById('gallery');
+const modalOverlay = document.getElementById('modalOverlay');
+const openUploadBtn = document.getElementById('openUpload');
+const cancelUploadBtn = document.getElementById('cancelUpload');
+const uploadForm = document.getElementById('uploadForm');
+const submitBtn = document.getElementById('submitUpload');
+const progressText = document.getElementById('progressText');
+const postDateInput = document.getElementById('postDate');
+const groupList = document.getElementById('groupList');
+
+postDateInput.valueAsDate = new Date();
+
+openUploadBtn.addEventListener('click', () => modalOverlay.classList.add('open'));
+cancelUploadBtn.addEventListener('click', () => modalOverlay.classList.remove('open'));
+modalOverlay.addEventListener('click', (e) => {
+  if (e.target === modalOverlay) modalOverlay.classList.remove('open');
+});
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str ?? '';
+  return div.innerHTML;
+}
+
+async function sha256Hex(arrayBuffer) {
+  const digest = await crypto.subtle.digest('SHA-256', arrayBuffer);
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function loadGallery() {
+  const { data, error } = await supabase
+    .from('posts')
+    .select('*')
+    .order('post_date', { ascending: false })
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    gallery.innerHTML = `<div class="empty">読み込みエラー: ${escapeHtml(error.message)}</div>`;
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    gallery.innerHTML = '<div class="empty">まだ投稿がありません。右上の「+ 投稿」から追加してね。</div>';
+    return;
+  }
+
+  const groupNames = [...new Set(data.map(p => p.group_name))];
+  groupList.innerHTML = groupNames.map(g => `<option value="${escapeHtml(g)}">`).join('');
+
+  const byDate = new Map();
+  for (const post of data) {
+    if (!byDate.has(post.post_date)) byDate.set(post.post_date, []);
+    byDate.get(post.post_date).push(post);
+  }
+
+  let html = '';
+  for (const [date, posts] of byDate) {
+    html += `<div class="date-heading">${formatDate(date)}</div>`;
+    for (const post of posts) {
+      html += `
+        <div class="card">
+          <video controls preload="metadata" src="${escapeHtml(post.video_url)}"></video>
+          <div class="card-body">
+            <span class="badge">${escapeHtml(post.group_name)}</span>
+            ${post.uploader_name ? `<div class="card-meta">投稿者: ${escapeHtml(post.uploader_name)}</div>` : ''}
+            ${post.memo ? `<div class="card-memo">${escapeHtml(post.memo)}</div>` : ''}
+            <div class="card-footer">
+              <button class="delete-btn" data-id="${post.id}" data-url="${escapeHtml(post.video_url)}">削除</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }
+  gallery.innerHTML = html;
+
+  gallery.querySelectorAll('.delete-btn').forEach(btn => {
+    btn.addEventListener('click', () => handleDelete(btn.dataset.id, btn.dataset.url));
+  });
+}
+
+async function handleDelete(id, videoUrl) {
+  if (!confirm('この投稿を削除する？元には戻せません。')) return;
+
+  const marker = `/${BUCKET}/`;
+  const idx = videoUrl.indexOf(marker);
+  if (idx !== -1) {
+    const path = decodeURIComponent(videoUrl.slice(idx + marker.length));
+    await supabase.storage.from(BUCKET).remove([path]);
+  }
+
+  const { error } = await supabase.from('posts').delete().eq('id', id);
+  if (error) {
+    alert('削除に失敗しました: ' + error.message);
+    return;
+  }
+  loadGallery();
+}
+
+uploadForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  submitBtn.disabled = true;
+
+  try {
+    const file = document.getElementById('videoFile').files[0];
+    const postDate = postDateInput.value;
+    const groupName = document.getElementById('groupName').value.trim();
+    const uploaderName = document.getElementById('uploaderName').value.trim();
+    const memo = document.getElementById('memo').value.trim();
+
+    if (!file || !postDate || !groupName) {
+      alert('必須項目を入力してください。');
+      submitBtn.disabled = false;
+      return;
+    }
+
+    progressText.textContent = 'ハッシュ計算中...';
+    const buffer = await file.arrayBuffer();
+    const hash = await sha256Hex(buffer);
+
+    const ext = file.name.includes('.') ? file.name.split('.').pop() : 'mp4';
+    const path = `${postDate}/${groupName}/${hash.slice(0, 12)}.${ext}`;
+
+    progressText.textContent = 'アップロード中...';
+    const { error: uploadError } = await supabase.storage
+      .from(BUCKET)
+      .upload(path, file, { contentType: file.type, upsert: false });
+
+    if (uploadError && !uploadError.message.includes('already exists')) {
+      throw uploadError;
+    }
+
+    const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
+
+    progressText.textContent = '保存中...';
+    const { error: insertError } = await supabase.from('posts').insert({
+      post_date: postDate,
+      group_name: groupName,
+      video_url: urlData.publicUrl,
+      video_hash: hash,
+      uploader_name: uploaderName || null,
+      memo: memo || null,
+    });
+
+    if (insertError) throw insertError;
+
+    progressText.textContent = '';
+    uploadForm.reset();
+    postDateInput.valueAsDate = new Date();
+    modalOverlay.classList.remove('open');
+    loadGallery();
+  } catch (err) {
+    alert('投稿に失敗しました: ' + err.message);
+    progressText.textContent = '';
+  } finally {
+    submitBtn.disabled = false;
+  }
+});
+
+loadGallery();
+</script>
+
+</body>
+</html>
